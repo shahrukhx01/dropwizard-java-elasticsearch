@@ -1,0 +1,1025 @@
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.1.xsd">
+
+    <!--available contexts test, prod, local-test
+    local-test (used for unit tests) should support h2 database-->
+
+    <changeSet id="ADX-001.1" author="denis" context="!local-test" dbms="postgresql">
+        <sql>CREATE EXTENSION IF NOT EXISTS "uuid-ossp"</sql>
+    </changeSet>
+
+    <changeSet id="ADX-002.1" author="denis" dbms="postgresql, h2">
+        <createTable tableName="companies">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" primaryKeyName="pk_company_id"/>
+            </column>
+            <column name="name" type="varchar">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="ADX-002.1S" author="denis" context="local-test, test" dbms="postgresql, h2">
+        <sql>
+            INSERT INTO companies (id, name)
+            VALUES
+            ('142ad193-1164-4259-9289-9fa1e2444405', 'company1'),
+            ('c1899a01-8e7d-416e-91c9-2552e9e13174', 'company2')
+        </sql>
+    </changeSet>
+
+    <changeSet id="ADX-001.3" author="denis" dbms="postgresql, h2">
+        <createTable tableName="users">
+            <column name="username" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="created" defaultValueComputed="CURRENT_TIMESTAMP()" type="TIMESTAMP"/>
+
+            <column name="updated" type="TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" primaryKeyName="pk_user_id"/>
+            </column>
+            <column name="role" type="int2">
+                <constraints nullable="false"/>
+            </column>
+            <column name="email" type="varchar">
+                <constraints nullable="false"/>
+            </column>
+            <column name="password" type="varchar">
+                <constraints nullable="false"/>
+            </column>
+            <column name="company" type="UUID">
+                <constraints nullable="true"/>
+            </column>
+        </createTable>
+
+        <addUniqueConstraint columnNames="username" constraintName="users_username_unique" tableName="users"/>
+
+        <addUniqueConstraint columnNames="email" constraintName="users_email_unique" tableName="users"/>
+
+        <addForeignKeyConstraint baseColumnNames="company" baseTableName="users" constraintName="fk_users_company"
+                                 deferrable="false" initiallyDeferred="false" onDelete="RESTRICT" onUpdate="CASCADE"
+                                 referencedColumnNames="id" referencedTableName="companies"/>
+    </changeSet>
+
+    <changeSet id="ADX-001.3S" author="denis" context="local-test, test" dbms="postgresql, h2">
+        <sql>
+            INSERT INTO users (id, username, role, email, password, company)
+            VALUES
+            ('0e1583fc-6862-43ea-bc3c-02cf83cbcd70', 'username1', 0, 'email1', 'password1',
+            '142ad193-1164-4259-9289-9fa1e2444405'),
+            ('b2f7c595-6177-4e70-9dce-e79efa4b87c8', 'username2', 0, 'email2', 'password2',
+            '142ad193-1164-4259-9289-9fa1e2444405')
+        </sql>
+    </changeSet>
+
+    <!--<changeSet id="ADX-001.4" author="denis" context="!local-test" dbms="postgresql, h2">-->
+    <!--<createProcedure>-->
+    <!--CREATE OR REPLACE FUNCTION users_timestamp_update()-->
+    <!--RETURNS TRIGGER AS $$-->
+    <!--BEGIN-->
+    <!--NEW.updated = CURRENT_TIMESTAMP;-->
+    <!--RETURN NEW;-->
+    <!--END;-->
+    <!--$$ language 'plpgsql'-->
+    <!--</createProcedure>-->
+    <!--</changeSet>-->
+
+    <!--<changeSet id="ADX-001.5" author="denis" context="!local-test" dbms="postgresql, h2">-->
+    <!--<sql>-->
+    <!--DROP TRIGGER IF EXISTS timestamp_on_updated ON users;-->
+    <!--CREATE TRIGGER timestamp_on_updated BEFORE UPDATE-->
+    <!--ON users FOR EACH ROW EXECUTE PROCEDURE-->
+    <!--users_timestamp_update()-->
+    <!--</sql>-->
+    <!--</changeSet>-->
+
+    <changeSet id="ADX-002.3" author="denis" dbms="postgresql, h2">
+        <createTable tableName="ads">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" unique="true" primaryKeyName="ad_pk"/>
+            </column>
+            <column name="name" type="varchar">
+                <constraints nullable="false"/>
+            </column>
+            <column name="type" type="int2">
+                <constraints nullable="false"/>
+            </column>
+            <column name="company" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="varchar">
+                <constraints nullable="true"/>
+            </column>
+            <column name="created_by" type="UUID"> <!-- added in ADX-014 branch -->
+                <constraints nullable="false"/>
+            </column>
+
+            <column defaultValueComputed="CURRENT_TIMESTAMP()" name="created"
+                    type="TIMESTAMP"/> <!-- added in ADX-014 branch -->
+        </createTable>
+
+        <addForeignKeyConstraint baseColumnNames="company" baseTableName="ads" constraintName="fk_ads_company"
+                                 deferrable="false" initiallyDeferred="false" onDelete="CASCADE" onUpdate="CASCADE"
+                                 referencedColumnNames="id" referencedTableName="companies"/>
+    </changeSet>
+
+    <changeSet id="ADX-002.3S" author="denis" context="local-test, test" dbms="postgresql, h2">
+        <sql>
+            INSERT INTO ads (id, type, company, name, description, created_by)
+            VALUES
+            ('288a9e5b-6c44-4d9f-b2f6-4d846ce04b9d', 1, '142ad193-1164-4259-9289-9fa1e2444405', 'name1', 'ad1',
+            '0e1583fc-6862-43ea-bc3c-02cf83cbcd70'),
+            ('4b767bcc-39ea-4969-8284-07f41a6bc274', 2, '142ad193-1164-4259-9289-9fa1e2444405', 'name2', 'ad2',
+            '0e1583fc-6862-43ea-bc3c-02cf83cbcd70'),
+            ('8ab7bd4c-9574-4700-bc06-46346026673e', 2, '142ad193-1164-4259-9289-9fa1e2444405', 'name3', 'ad3',
+            '0e1583fc-6862-43ea-bc3c-02cf83cbcd70')
+        </sql>
+    </changeSet>
+
+    <changeSet id="ADX-002.4" author="denis" dbms="postgresql, h2">
+        <createTable tableName="traffic_sources">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" primaryKeyName="traffic_sources_pk"/>
+            </column>
+            <column name="name" type="varchar">
+                <constraints nullable="false"/>
+            </column>
+            <column name="company" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="UUID"> <!-- added in ADX-014 branch -->
+                <constraints nullable="false"/>
+            </column>
+
+            <column defaultValueComputed="CURRENT_TIMESTAMP()" name="created"
+                    type="TIMESTAMP"/> <!-- added in ADX-014 branch -->
+        </createTable>
+
+        <addForeignKeyConstraint baseColumnNames="company" baseTableName="traffic_sources"
+                                 constraintName="fk_traffic_sources_company"
+                                 deferrable="false" initiallyDeferred="false" onDelete="CASCADE" onUpdate="CASCADE"
+                                 referencedColumnNames="id" referencedTableName="companies"/>
+    </changeSet>
+
+    <changeSet id="ADX-002.4S" author="denis" context="test, local-test" dbms="postgresql, h2">
+        <sql>
+            INSERT INTO traffic_sources (id, name, company, created_by)
+            VALUES
+            ('0b8319be-5a7d-445d-ace4-9d56480eb97b', 'Google Search', '142ad193-1164-4259-9289-9fa1e2444405',
+            '0e1583fc-6862-43ea-bc3c-02cf83cbcd70'),
+            ('598bd2fc-4e18-465d-abb9-da54dce6f423', 'Google Display', '142ad193-1164-4259-9289-9fa1e2444405',
+            '0e1583fc-6862-43ea-bc3c-02cf83cbcd70'),
+            ('f6f425de-68c1-402e-9d65-ae80dbe0f82e', 'Facebook', '142ad193-1164-4259-9289-9fa1e2444405',
+            '0e1583fc-6862-43ea-bc3c-02cf83cbcd70')
+        </sql>
+    </changeSet>
+
+    <changeSet id="ADX-002.5" author="denis" dbms="postgresql, h2"> <!-- CRUD in ADX-013 branch -->
+        <createTable tableName="campaign_types">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" primaryKeyName="campaign_type_pk"/>
+            </column>
+            <column name="name" type="varchar">
+                <constraints nullable="false"/>
+            </column>
+            <column name="company" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="UUID"> <!-- added in ADX-013 branch -->
+                <constraints nullable="false"/>
+            </column>
+
+            <column defaultValueComputed="CURRENT_TIMESTAMP()" name="created" type="TIMESTAMP"/>
+        </createTable>
+
+        <addForeignKeyConstraint baseColumnNames="company" baseTableName="campaign_types"
+                                 constraintName="fk_company_id"
+                                 deferrable="false" initiallyDeferred="false" onDelete="CASCADE" onUpdate="CASCADE"
+                                 referencedColumnNames="id" referencedTableName="companies"/>
+    </changeSet>
+
+    <!-- standard campaign_types are predefined and stored in frontend -->
+    <changeSet id="ADX-002.5S" author="denis" context="test, local-test" dbms="postgresql, h2">
+        <sql>
+            INSERT INTO campaign_types (id, name, company, created_by)
+            VALUES
+            ('6d840f1a-237c-4b5a-b56d-5ee963ffa7d9', 'Custom_type_1', '142ad193-1164-4259-9289-9fa1e2444405',
+            '0e1583fc-6862-43ea-bc3c-02cf83cbcd70'),
+            ('7f623cc1-fd92-42f5-bfaf-a89dc9b80bc0', 'Custom_type_2', '142ad193-1164-4259-9289-9fa1e2444405',
+            '0e1583fc-6862-43ea-bc3c-02cf83cbcd70')
+        </sql>
+    </changeSet>
+
+    <changeSet id="ADX-002.6" author="denis" dbms="postgresql, h2">
+        <createTable tableName="campaigns">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" primaryKeyName="campaigns_pk"/>
+            </column>
+            <column name="name" type="varchar">
+                <constraints nullable="false"/>
+            </column>
+            <column name="type" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="company" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="varchar">
+                <constraints nullable="true"/>
+            </column>
+            <column name="user_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+
+            <column defaultValueComputed="CURRENT_TIMESTAMP()" name="created" type="TIMESTAMP"/>
+        </createTable>
+
+        <addForeignKeyConstraint baseColumnNames="company" baseTableName="campaigns"
+                                 constraintName="fk_campaigns_company"
+                                 deferrable="false" initiallyDeferred="false" onDelete="CASCADE" onUpdate="CASCADE"
+                                 referencedColumnNames="id" referencedTableName="companies"/>
+
+        <addForeignKeyConstraint baseColumnNames="type" baseTableName="campaigns"
+                                 constraintName="fk_campaign_type"
+                                 deferrable="false" initiallyDeferred="false" onDelete="RESTRICT" onUpdate="CASCADE"
+                                 referencedColumnNames="id" referencedTableName="campaign_types"/>
+
+        <addForeignKeyConstraint baseColumnNames="user_id" baseTableName="campaigns"
+                                 constraintName="fk_campaigns_user"
+                                 deferrable="false" initiallyDeferred="false" onDelete="CASCADE" onUpdate="CASCADE"
+                                 referencedColumnNames="id" referencedTableName="users"/>
+    </changeSet>
+
+    <changeSet id="ADX-002.6S" author="denis" context="test, local-test" dbms="postgresql, h2">
+        <sql>
+            INSERT INTO campaigns (id, user_id, name, type, company, description)
+            VALUES
+            ('c37a98cc-52cf-4df4-9606-4a853eafae7d', '0e1583fc-6862-43ea-bc3c-02cf83cbcd70', 'campaign1',
+            '6d840f1a-237c-4b5a-b56d-5ee963ffa7d9', '142ad193-1164-4259-9289-9fa1e2444405', 'some_description1'),
+            ('d71594f7-6b07-4a39-bdc1-8721f480f75c', '0e1583fc-6862-43ea-bc3c-02cf83cbcd70', 'campaign2',
+            '6d840f1a-237c-4b5a-b56d-5ee963ffa7d9', '142ad193-1164-4259-9289-9fa1e2444405', 'some_description2')
+        </sql>
+    </changeSet>
+
+    <changeSet id="ADX-010.1" author="denis" dbms="postgresql, h2">
+        <createTable tableName="offer_rotations">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" primaryKeyName="offer_rotations_pk"/>
+            </column>
+            <column name="company" type="UUID">
+                <constraints nullable="false" unique="false"/>
+            </column>
+            <column name="name" type="varchar">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="UUID">
+                <constraints nullable="false" unique="false"/>
+            </column>
+
+            <column name="created" defaultValueComputed="CURRENT_TIMESTAMP()" type="TIMESTAMP"/>
+        </createTable>
+
+        <addForeignKeyConstraint baseColumnNames="company" baseTableName="offer_rotations"
+                                 constraintName="fk_offer_rotation_company"
+                                 deferrable="false" initiallyDeferred="false" onDelete="CASCADE" onUpdate="CASCADE"
+                                 referencedColumnNames="id" referencedTableName="companies"/>
+    </changeSet>
+
+    <changeSet id="ADX-010.1S" author="denis" context="test, local-test" dbms="postgresql, h2">
+        <sql>
+            INSERT INTO offer_rotations (id, company, name, created_by)
+            VALUES
+            ('18eae304-f1ab-420c-86a6-a15de5c58e5f', '142ad193-1164-4259-9289-9fa1e2444405', 'offerRotationName1',
+            '0e1583fc-6862-43ea-bc3c-02cf83cbcd70'),
+            ('f15d8650-0e42-497b-94e6-1a1e4b66706a', '142ad193-1164-4259-9289-9fa1e2444405', 'offerRotationName2',
+            '0e1583fc-6862-43ea-bc3c-02cf83cbcd70')
+        </sql>
+    </changeSet>
+
+
+    <changeSet id="ADX-002.7" author="denis" dbms="postgresql, h2">
+        <createTable tableName="campaign_urls">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" primaryKeyName="campaign_url_pk"/>
+            </column>
+            <column name="traffic_source" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="ad" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="campaign" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="url" type="varchar">
+                <constraints nullable="true"/>
+            </column>
+            <column name="offer_rotation" type="UUID"> <!-- added in ADX-015 branch -->
+                <constraints nullable="false"/>
+            </column>
+
+            <column defaultValueComputed="CURRENT_TIMESTAMP()" name="created" type="TIMESTAMP"/>
+        </createTable>
+
+        <addForeignKeyConstraint baseColumnNames="ad" baseTableName="campaign_urls" constraintName="fk_campaign_urls_ad"
+                                 deferrable="false" initiallyDeferred="false" onDelete="CASCADE" onUpdate="CASCADE"
+                                 referencedColumnNames="id" referencedTableName="ads"/>
+
+        <addForeignKeyConstraint baseColumnNames="campaign" baseTableName="campaign_urls"
+                                 constraintName="fk_campaign_urls_campaign"
+                                 deferrable="false" initiallyDeferred="false" onDelete="CASCADE" onUpdate="CASCADE"
+                                 referencedColumnNames="id" referencedTableName="campaigns"/>
+
+        <addForeignKeyConstraint baseColumnNames="traffic_source" baseTableName="campaign_urls"
+                                 constraintName="fk_campaign_urls_traffic_source"
+                                 deferrable="false" initiallyDeferred="false" onDelete="CASCADE" onUpdate="CASCADE"
+                                 referencedColumnNames="id" referencedTableName="traffic_sources"/>
+
+        <addForeignKeyConstraint baseColumnNames="offer_rotation" baseTableName="campaign_urls"
+                                 constraintName="fk_campaign_urls_offer_rotation"
+                                 deferrable="false" initiallyDeferred="false" onDelete="CASCADE" onUpdate="CASCADE"
+                                 referencedColumnNames="id" referencedTableName="offer_rotations"/>
+    </changeSet>
+
+    <changeSet id="ADX-002.7S" author="denis" context="test, local-test" dbms="postgresql, h2">
+        <sql>
+            INSERT INTO campaign_urls (id, traffic_source, ad, campaign, offer_rotation)
+            VALUES
+            ('0de554b9-2e69-47c7-8a7a-50719250bfe3', '0b8319be-5a7d-445d-ace4-9d56480eb97b',
+            '288a9e5b-6c44-4d9f-b2f6-4d846ce04b9d',
+            'c37a98cc-52cf-4df4-9606-4a853eafae7d', '18eae304-f1ab-420c-86a6-a15de5c58e5f')
+        </sql>
+    </changeSet>
+
+
+    <changeSet id="ADX-002.8" author="denis" dbms="postgresql, h2">
+        <createTable tableName="clicks">
+            <column autoIncrement="true" name="id" type="SERIAL">
+                <constraints primaryKey="true" primaryKeyName="clicks_pk"/>
+            </column>
+            <column name="campaign_url" type="UUID">
+                <constraints nullable="false" unique="false"/>
+            </column>
+
+            <column defaultValueComputed="CURRENT_TIMESTAMP()" name="created" type="TIMESTAMP"/>
+
+            <column name="ip" type="varchar">
+                <constraints nullable="true"/>
+            </column>
+            <column name="query_string" type="varchar">
+                <constraints nullable="true"/>
+            </column>
+            <column name="user_agent" type="varchar">
+                <constraints nullable="true"/>
+            </column>
+            <column name="device_type" type="int2">
+                <constraints nullable="true"/>
+            </column>
+            <column name="device_model" type="varchar">
+                <constraints nullable="true"/>
+            </column>
+            <column name="sub_type" type="int2">
+                <constraints nullable="true"/>
+            </column>
+            <column name="country" type="varchar">
+                <constraints nullable="true"/>
+            </column>
+            <column name="state" type="varchar">
+                <constraints nullable="true"/>
+            </column>
+            <column name="city" type="varchar">
+                <constraints nullable="true"/>
+            </column>
+            <column name="browser" type="varchar">
+                <constraints nullable="true"/>
+            </column>
+            <column name="offer_setup" type="UUID">
+                <constraints nullable="true"/>
+            </column>
+            <column name="offer_rotation" type="UUID">
+                <constraints nullable="true"/>
+            </column>
+            <column name="step_1_sale" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="step_2_sale" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="step_3_sale" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint baseColumnNames="campaign_url" baseTableName="clicks"
+                                 constraintName="fk_clicks_campaign"
+                                 deferrable="false" initiallyDeferred="false" onDelete="CASCADE" onUpdate="CASCADE"
+                                 referencedColumnNames="id" referencedTableName="campaign_urls"/>
+    </changeSet>
+
+    <changeSet id="ADX-006.1" author="denis" dbms="postgresql, h2">
+        <createTable tableName="networks">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" primaryKeyName="networks_pk"/>
+            </column>
+            <column name="company" type="UUID">
+                <constraints nullable="false" unique="false"/>
+            </column>
+            <column name="name" type="varchar">
+                <constraints nullable="false"/>
+            </column>
+            <column name="login_id" type="varchar">
+                <constraints nullable="true"/>
+            </column>
+            <column name="type" type="int2">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="UUID"> <!-- added in ADX-014 branch -->
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="created" defaultValueComputed="CURRENT_TIMESTAMP()"
+                    type="TIMESTAMP"/> <!-- added in ADX-014 branch -->
+        </createTable>
+
+        <addForeignKeyConstraint baseColumnNames="company" baseTableName="networks"
+                                 constraintName="fk_networks_company"
+                                 deferrable="false" initiallyDeferred="false" onDelete="CASCADE" onUpdate="CASCADE"
+                                 referencedColumnNames="id" referencedTableName="companies"/>
+    </changeSet>
+
+    <changeSet id="ADX-006.1S" author="denis" context="test, local-test" dbms="postgresql, h2">
+        <sql>
+            INSERT INTO networks (id, company, name, login_id, type, created_by)
+            VALUES
+            ('410bc3ed-43aa-44cc-a5a7-02caa9dcc5e2', '142ad193-1164-4259-9289-9fa1e2444405', 'networkName1', 'loginId1',
+            '1', '0e1583fc-6862-43ea-bc3c-02cf83cbcd70'),
+            ('90f56313-e0c9-4ad4-a2b5-8d832253ce4f', '142ad193-1164-4259-9289-9fa1e2444405', 'networkName2', 'loginId2',
+            '1', '0e1583fc-6862-43ea-bc3c-02cf83cbcd70')
+        </sql>
+    </changeSet>
+
+    <changeSet id="ADX-007.1" author="denis" dbms="postgresql, h2">
+        <createTable tableName="offers">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" primaryKeyName="offers_pk"/>
+            </column>
+            <column name="network" type="UUID">
+                <constraints nullable="false" unique="false"/>
+            </column>
+            <column name="name" type="varchar">
+                <constraints nullable="false"/>
+            </column>
+            <column name="image_url" type="varchar">
+                <constraints nullable="false"/>
+            </column>
+            <column name="url" type="varchar">
+                <constraints nullable="false"/>
+            </column>
+            <column name="payout" type="currency">
+                <constraints nullable="false"/>
+            </column>
+            <column name="step" type="int2">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="UUID"> <!-- added in ADX-014 branch -->
+                <constraints nullable="false"/>
+            </column>
+            <column name="created" defaultValueComputed="CURRENT_TIMESTAMP()" type="TIMESTAMP"/>
+        </createTable>
+
+        <addForeignKeyConstraint baseColumnNames="network" baseTableName="offers"
+                                 constraintName="fk_offers_network"
+                                 deferrable="false" initiallyDeferred="false" onDelete="CASCADE" onUpdate="CASCADE"
+                                 referencedColumnNames="id" referencedTableName="networks"/>
+    </changeSet>
+
+    <changeSet id="ADX-007.1S" author="denis" context="test, local-test" dbms="postgresql, h2">
+        <sql>
+            INSERT INTO offers (id, network, name, image_url, url, payout, step, created_by)
+            VALUES
+            ('258898af-cecc-4569-b925-4feb6d0cf648', '410bc3ed-43aa-44cc-a5a7-02caa9dcc5e2', 'offerName1', 'image1',
+            'url1', '2.02', '1', '0e1583fc-6862-43ea-bc3c-02cf83cbcd70'),
+            ('d192b1d3-923e-4871-b650-2e8b895870fe', '90f56313-e0c9-4ad4-a2b5-8d832253ce4f', 'offerName2', 'image2',
+            'url2', '0.10', '2', '0e1583fc-6862-43ea-bc3c-02cf83cbcd70'),
+            ('f8243fc6-07f3-4785-b55d-daaadb382e64', '90f56313-e0c9-4ad4-a2b5-8d832253ce4f', 'offerName2', 'image3',
+            'url3', '0.19', '3', '0e1583fc-6862-43ea-bc3c-02cf83cbcd70')
+        </sql>
+    </changeSet>
+
+    <changeSet id="ADX-008.1" author="denis" dbms="postgresql, h2">
+        <createTable tableName="landings">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" primaryKeyName="landings_pk"/>
+            </column>
+            <column name="company" type="UUID">
+                <constraints nullable="false" unique="false"/>
+            </column>
+            <column name="name" type="varchar">
+                <constraints nullable="false"/>
+            </column>
+            <column name="url" type="varchar">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="UUID"> <!-- added in ADX-014 branch -->
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="created" defaultValueComputed="CURRENT_TIMESTAMP()" type="TIMESTAMP"/>
+        </createTable>
+
+        <addForeignKeyConstraint baseColumnNames="company" baseTableName="landings"
+                                 constraintName="fk_landings_company"
+                                 deferrable="false" initiallyDeferred="false" onDelete="CASCADE" onUpdate="CASCADE"
+                                 referencedColumnNames="id" referencedTableName="companies"/>
+    </changeSet>
+
+    <changeSet id="ADX-008.1S" author="denis" context="test, local-test" dbms="postgresql, h2">
+        <sql>
+            INSERT INTO landings (id, company, name, url, created_by)
+            VALUES
+            ('320a33f4-e5ab-474a-8c3c-4958dadb3464', '142ad193-1164-4259-9289-9fa1e2444405', 'landingName1',
+            'landingUrl1', '0e1583fc-6862-43ea-bc3c-02cf83cbcd70'),
+            ('78e84ed8-a87f-49eb-b8c0-47935a281bf0', '142ad193-1164-4259-9289-9fa1e2444405', 'landingName2',
+            'landingUrl2', '0e1583fc-6862-43ea-bc3c-02cf83cbcd70')
+        </sql>
+    </changeSet>
+
+    <changeSet id="ADX-009.1" author="denis" dbms="postgresql, h2">
+        <createTable tableName="offer_setups">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" primaryKeyName="offer_setups_pk"/>
+            </column>
+            <column name="company" type="UUID">
+                <constraints nullable="false" unique="false"/>
+            </column>
+            <column name="name" type="varchar">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="UUID">
+                <constraints nullable="false" unique="false"/>
+            </column>
+            <column name="offer_step_1" type="UUID">
+                <constraints nullable="true" unique="false"/>
+            </column>
+            <column name="offer_step_2" type="UUID">
+                <constraints nullable="true" unique="false"/>
+            </column>
+            <column name="offer_step_3" type="UUID">
+                <constraints nullable="true" unique="false"/>
+            </column>
+            <column name="landing" type="UUID">
+                <constraints nullable="true" unique="false"/>
+            </column>
+            <!--<column name="device_types" type="array">-->
+            <!--<constraints nullable="false" unique="false"/>-->
+            <!--</column>-->
+
+            <column name="created" defaultValueComputed="CURRENT_TIMESTAMP()" type="TIMESTAMP"/>
+
+            <column name="desktop" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false" unique="false"/>
+            </column>
+            <column name="mobile" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false" unique="false"/>
+            </column>
+            <column name="tablet" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false" unique="false"/>
+            </column>
+            <column name="other" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false" unique="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint baseColumnNames="company" baseTableName="offer_setups"
+                                 constraintName="fk_offer_setup_company"
+                                 deferrable="false" initiallyDeferred="false" onDelete="CASCADE" onUpdate="CASCADE"
+                                 referencedColumnNames="id" referencedTableName="companies"/>
+
+        <addForeignKeyConstraint baseColumnNames="offer_step_1" baseTableName="offer_setups"
+                                 constraintName="fk_offer_step_1_offer_setup"
+                                 deferrable="false" initiallyDeferred="false" onDelete="SET NULL" onUpdate="CASCADE"
+                                 referencedColumnNames="id" referencedTableName="offers"/>
+
+        <addForeignKeyConstraint baseColumnNames="offer_step_2" baseTableName="offer_setups"
+                                 constraintName="fk_offer_step_2_offer_setup"
+                                 deferrable="false" initiallyDeferred="false" onDelete="SET NULL" onUpdate="CASCADE"
+                                 referencedColumnNames="id" referencedTableName="offers"/>
+
+        <addForeignKeyConstraint baseColumnNames="offer_step_3" baseTableName="offer_setups"
+                                 constraintName="fk_offer_step_3_offer_setup"
+                                 deferrable="false" initiallyDeferred="false" onDelete="SET NULL" onUpdate="CASCADE"
+                                 referencedColumnNames="id" referencedTableName="offers"/>
+
+        <addForeignKeyConstraint baseColumnNames="landing" baseTableName="offer_setups"
+                                 constraintName="fk_landing_offer_setup"
+                                 deferrable="false" initiallyDeferred="false" onDelete="SET NULL" onUpdate="CASCADE"
+                                 referencedColumnNames="id" referencedTableName="landings"/>
+    </changeSet>
+
+    <changeSet id="ADX-009.1S" author="denis" context="test, local-test" dbms="postgresql, h2">
+        <sql>
+            INSERT INTO offer_setups (id, company, name, created_by, offer_step_1, offer_step_2, offer_step_3, landing,
+            desktop, mobile, tablet, other)
+            VALUES
+            ('d7bac0aa-7b50-4553-96d0-f9743050172e', '142ad193-1164-4259-9289-9fa1e2444405', 'offerSetupName1',
+            '0e1583fc-6862-43ea-bc3c-02cf83cbcd70',
+            '258898af-cecc-4569-b925-4feb6d0cf648','d192b1d3-923e-4871-b650-2e8b895870fe','f8243fc6-07f3-4785-b55d-daaadb382e64',
+            '320a33f4-e5ab-474a-8c3c-4958dadb3464', true, false, false, true),
+            ('29265cf5-eb44-40e3-b6fa-3145cd1235c6', '142ad193-1164-4259-9289-9fa1e2444405', 'offerSetupName2',
+            '0e1583fc-6862-43ea-bc3c-02cf83cbcd70',
+            '258898af-cecc-4569-b925-4feb6d0cf648','d192b1d3-923e-4871-b650-2e8b895870fe','f8243fc6-07f3-4785-b55d-daaadb382e64',
+            '320a33f4-e5ab-474a-8c3c-4958dadb3464', true, false, false, true),
+            ('1bc1c688-38b8-4322-9567-26e86a457dd4', '142ad193-1164-4259-9289-9fa1e2444405', 'offerSetupName2',
+            '0e1583fc-6862-43ea-bc3c-02cf83cbcd70',
+            '258898af-cecc-4569-b925-4feb6d0cf648','d192b1d3-923e-4871-b650-2e8b895870fe','f8243fc6-07f3-4785-b55d-daaadb382e64',
+            '320a33f4-e5ab-474a-8c3c-4958dadb3464', true, false, false, true)
+        </sql>
+    </changeSet>
+
+    <changeSet id="ADX-010.2" author="denis" dbms="postgresql, h2">
+        <createTable tableName="offer_rotation_setups">
+            <column name="offer_rotation" type="UUID">
+                <constraints nullable="false" unique="false"/>
+            </column>
+            <column name="offer_setup" type="UUID">
+                <constraints nullable="false" unique="false"/>
+            </column>
+            <column name="enabled" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false" unique="false"/>
+            </column>
+
+            <column name="created" defaultValueComputed="CURRENT_TIMESTAMP()" type="TIMESTAMP"/>
+        </createTable>
+
+        <addForeignKeyConstraint baseColumnNames="offer_rotation" baseTableName="offer_rotation_setups"
+                                 constraintName="fk_offer_rotation_setups_rotation"
+                                 deferrable="false" initiallyDeferred="false" onDelete="CASCADE" onUpdate="CASCADE"
+                                 referencedColumnNames="id" referencedTableName="offer_rotations"/>
+
+        <addForeignKeyConstraint baseColumnNames="offer_setup" baseTableName="offer_rotation_setups"
+                                 constraintName="fk_offer_rotation_setups_setup"
+                                 deferrable="false" initiallyDeferred="false" onDelete="CASCADE" onUpdate="CASCADE"
+                                 referencedColumnNames="id" referencedTableName="offer_setups"/>
+    </changeSet>
+
+    <changeSet id="ADX-010.2S" author="denis" context="test, local-test" dbms="postgresql, h2">
+        <sql>
+            INSERT INTO offer_rotation_setups (offer_rotation, offer_setup, enabled)
+            VALUES
+            ('18eae304-f1ab-420c-86a6-a15de5c58e5f', 'd7bac0aa-7b50-4553-96d0-f9743050172e', true),
+            ('18eae304-f1ab-420c-86a6-a15de5c58e5f', '29265cf5-eb44-40e3-b6fa-3145cd1235c6', false)
+        </sql>
+    </changeSet>
+
+    <changeSet id="ADX-015.1S" author="denis" context="test, local-test" dbms="postgresql, h2">
+        <sql>
+            INSERT INTO companies (id, name) VALUES ('784e3650-6aba-4a04-aa76-8d308d891d84', 'test company')
+        </sql>
+        <sql>
+            INSERT INTO users (id, username, role, email, password, company)
+            VALUES
+            ('c5b16269-2af0-4430-b545-55560eeed227', 'myUser', '20', 'mail@mail.com', 'userPassword',
+            '784e3650-6aba-4a04-aa76-8d308d891d84')
+        </sql>
+        <sql>
+            INSERT INTO ads (id, type, company, name, description, created_by)
+            VALUES
+            ('4fd4ab2d-e339-4d20-b996-46a835bb5f29', '1', '784e3650-6aba-4a04-aa76-8d308d891d84', 'testAd', 'some nice
+            text', 'c5b16269-2af0-4430-b545-55560eeed227')
+        </sql>
+        <sql>
+            INSERT INTO traffic_sources (id, name, company, created_by)
+            VALUES
+            ('81db4571-7769-4c41-9a17-dbb8ed36a694', 'Google Search', '784e3650-6aba-4a04-aa76-8d308d891d84',
+            'c5b16269-2af0-4430-b545-55560eeed227'),
+            ('10450a98-311e-4e11-8e68-a50d96079b61', 'Google Display', '784e3650-6aba-4a04-aa76-8d308d891d84',
+            'c5b16269-2af0-4430-b545-55560eeed227'),
+            ('1359a7a4-5170-4c35-a7a3-da2e00a6b52b', 'Facebook', '784e3650-6aba-4a04-aa76-8d308d891d84',
+            'c5b16269-2af0-4430-b545-55560eeed227')
+        </sql>
+        <sql>
+            INSERT INTO campaign_types (id, name, company, created_by)
+            VALUES
+            ('68f0f770-a638-422c-a28b-640c6fadf192', 'campaign type 1', '784e3650-6aba-4a04-aa76-8d308d891d84',
+            'c5b16269-2af0-4430-b545-55560eeed227')
+        </sql>
+        <sql>
+            INSERT INTO campaigns (id, user_id, name, type, company, description)
+            VALUES
+            ('29f7ca56-03e0-4f9c-a027-50599bcb3cf9', 'c5b16269-2af0-4430-b545-55560eeed227', 'myCampaign',
+            '68f0f770-a638-422c-a28b-640c6fadf192', '784e3650-6aba-4a04-aa76-8d308d891d84', 'this is campaign
+            description')
+        </sql>
+        <sql>
+            INSERT INTO offer_rotations (id, company, name, created_by)
+            VALUES
+            ('b8dcd79c-5aea-49aa-8b26-4c9e7c804413', '784e3650-6aba-4a04-aa76-8d308d891d84', 'my offer rotation',
+            'c5b16269-2af0-4430-b545-55560eeed227')
+        </sql>
+        <!--<sql>-->
+        <!--INSERT INTO campaign_urls (id, traffic_source, ad, campaign, offer_rotation)-->
+        <!--VALUES-->
+        <!--('a97ab2cc-4861-4cfd-a063-952da5f4936c', '81db4571-7769-4c41-9a17-dbb8ed36a694', '4fd4ab2d-e339-4d20-b996-46a835bb5f29', '29f7ca56-03e0-4f9c-a027-50599bcb3cf9', 'b8dcd79c-5aea-49aa-8b26-4c9e7c804413')-->
+        <!--</sql>-->
+        <sql>
+            INSERT INTO networks (id, company, name, login_id, type, created_by)
+            VALUES
+            ('fa63fe11-84ed-42bf-bf6f-0b2e0b342c61', '784e3650-6aba-4a04-aa76-8d308d891d84', 'myNetwork', 'login_id
+            text', 2, 'c5b16269-2af0-4430-b545-55560eeed227')
+        </sql>
+        <sql>
+            INSERT INTO offers (id, network, name, image_url, url, payout, step, created_by)
+            VALUES
+            ('51c5edb0-2fed-4da7-9823-eb086727a926', 'fa63fe11-84ed-42bf-bf6f-0b2e0b342c61', 'offer name 1', 'image will
+            be here', 'offer 1 url', 0.28, 1, 'c5b16269-2af0-4430-b545-55560eeed227')
+        </sql>
+        <sql>
+            INSERT INTO offers (id, network, name, image_url, url, payout, step, created_by)
+            VALUES
+            ('be5f7dfc-2cf0-4de1-9bcb-08047dfeb82f', 'fa63fe11-84ed-42bf-bf6f-0b2e0b342c61', 'offer name 2', 'image will
+            be here', 'offer 2 url', 0.38, 1, 'c5b16269-2af0-4430-b545-55560eeed227')
+        </sql>
+        <sql>
+            INSERT INTO landings (id, company, name, url, created_by)
+            VALUES
+            ('806bdd5c-87dd-471c-a9ac-b383d5d72409', '784e3650-6aba-4a04-aa76-8d308d891d84', 'landing name 1',
+            'http://www.google.com', 'c5b16269-2af0-4430-b545-55560eeed227')
+        </sql>
+        <sql>
+            INSERT INTO landings (id, company, name, url, created_by)
+            VALUES
+            ('d30c28d0-1db7-4377-8154-f8227fed3243', '784e3650-6aba-4a04-aa76-8d308d891d84', 'landing name 2',
+            'http://www.microsoft.com', 'c5b16269-2af0-4430-b545-55560eeed227')
+        </sql>
+        <sql>
+            INSERT INTO offer_setups (id, company, name, created_by, offer_step_1, offer_step_2, offer_step_3, landing,
+            desktop, mobile, tablet, other)
+            VALUES
+            ('9114305a-22da-49b5-9755-c45e2af6e0dd', '784e3650-6aba-4a04-aa76-8d308d891d84', 'offer setup 1',
+            'c5b16269-2af0-4430-b545-55560eeed227', '51c5edb0-2fed-4da7-9823-eb086727a926', null, null,
+            '806bdd5c-87dd-471c-a9ac-b383d5d72409', true, true, false, true)
+        </sql>
+        <sql>
+            INSERT INTO offer_setups (id, company, name, created_by, offer_step_1, offer_step_2, offer_step_3, landing,
+            desktop, mobile, tablet, other)
+            VALUES
+            ('f8f2e131-6c59-4493-a280-ac7f7e47708d', '784e3650-6aba-4a04-aa76-8d308d891d84', 'offer setup 1',
+            'c5b16269-2af0-4430-b545-55560eeed227', 'be5f7dfc-2cf0-4de1-9bcb-08047dfeb82f', null, null,
+            'd30c28d0-1db7-4377-8154-f8227fed3243', false, false, true, true)
+        </sql>
+        <sql>
+            INSERT INTO offer_rotation_setups (offer_rotation, offer_setup, enabled)
+            VALUES
+            ('b8dcd79c-5aea-49aa-8b26-4c9e7c804413', '9114305a-22da-49b5-9755-c45e2af6e0dd', true),
+            ('b8dcd79c-5aea-49aa-8b26-4c9e7c804413', 'f8f2e131-6c59-4493-a280-ac7f7e47708d', true)
+        </sql>
+
+    </changeSet>
+
+    <changeSet id="ADX-018.1" author="denis" dbms="postgresql, h2">
+        <createTable tableName="traffic_source_reports">
+            <column autoIncrement="true" name="id" type="SERIAL">
+                <constraints primaryKey="true" primaryKeyName="tr_report_pk"/>
+            </column>
+            <column name="company" type="UUID">
+                <constraints nullable="false" unique="false"/>
+            </column>
+            <column name="traffic_source" type="UUID">
+                <constraints nullable="false" unique="false"/>
+            </column>
+            <column name="sale_count" type="int">
+                <constraints nullable="false"/>
+            </column>
+            <column name="click_count" type="int">
+                <constraints nullable="false"/>
+            </column>
+            <column name="revenue" type="double">
+                <constraints nullable="false"/>
+            </column>
+            <column name="epc" type="double">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="for_date" type="DATE"/>
+
+            <column name="created" defaultValueComputed="CURRENT_TIMESTAMP()" type="TIMESTAMP"/>
+        </createTable>
+
+        <addForeignKeyConstraint baseColumnNames="company" baseTableName="traffic_source_reports"
+                                 constraintName="fk_tsreports_company"
+                                 deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION"
+                                 referencedColumnNames="id" referencedTableName="companies"/>
+
+        <addForeignKeyConstraint baseColumnNames="traffic_source" baseTableName="traffic_source_reports"
+                                 constraintName="fk_tsreports_source"
+                                 deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION"
+                                 referencedColumnNames="id" referencedTableName="traffic_sources"/>
+    </changeSet>
+
+    <changeSet id="ADX-018.2" author="denis" dbms="postgresql, h2">
+        <createTable tableName="campaign_reports">
+            <column autoIncrement="true" name="id" type="SERIAL">
+                <constraints primaryKey="true" primaryKeyName="campaign_report_pk"/>
+            </column>
+            <column name="company" type="UUID">
+                <constraints nullable="false" unique="false"/>
+            </column>
+            <column name="campaign" type="UUID">
+                <constraints nullable="false" unique="false"/>
+            </column>
+            <column name="traffic_source" type="UUID">
+                <constraints nullable="false" unique="false"/>
+            </column>
+            <column name="sale_count" type="int">
+                <constraints nullable="false"/>
+            </column>
+            <column name="click_count" type="int">
+                <constraints nullable="false"/>
+            </column>
+            <column name="revenue" type="double">
+                <constraints nullable="false"/>
+            </column>
+            <column name="epc" type="double">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="for_date" type="DATE"/>
+
+            <column name="created" defaultValueComputed="CURRENT_TIMESTAMP()" type="TIMESTAMP"/>
+        </createTable>
+
+        <addForeignKeyConstraint baseColumnNames="company" baseTableName="campaign_reports"
+                                 constraintName="fk_campaign_reports_company"
+                                 deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION"
+                                 referencedColumnNames="id" referencedTableName="companies"/>
+
+        <addForeignKeyConstraint baseColumnNames="campaign" baseTableName="campaign_reports"
+                                 constraintName="fk_campaign_reports_campaign"
+                                 deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION"
+                                 referencedColumnNames="id" referencedTableName="campaigns"/>
+
+        <addForeignKeyConstraint baseColumnNames="traffic_source" baseTableName="campaign_reports"
+                                 constraintName="fk_campaign_reports_ts"
+                                 deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION"
+                                 referencedColumnNames="id" referencedTableName="traffic_sources"/>
+    </changeSet>
+
+    <changeSet id="ADX-018.3" author="denis" dbms="postgresql, h2">
+        <createTable tableName="offer_setup_reports">
+            <column autoIncrement="true" name="id" type="SERIAL">
+                <constraints primaryKey="true" primaryKeyName="offer_setup_report_pk"/>
+            </column>
+            <column name="company" type="UUID">
+                <constraints nullable="false" unique="false"/>
+            </column>
+            <column name="offer_setup" type="UUID">
+                <constraints nullable="false" unique="false"/>
+            </column>
+            <column name="traffic_source" type="UUID">
+                <constraints nullable="false" unique="false"/>
+            </column>
+            <column name="sale_count" type="int">
+                <constraints nullable="false"/>
+            </column>
+            <column name="click_count" type="int">
+                <constraints nullable="false"/>
+            </column>
+            <column name="revenue" type="double">
+                <constraints nullable="false"/>
+            </column>
+            <column name="epc" type="double">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="for_date" type="DATE"/>
+
+            <column name="created" defaultValueComputed="CURRENT_TIMESTAMP()" type="TIMESTAMP"/>
+        </createTable>
+
+        <addForeignKeyConstraint baseColumnNames="company" baseTableName="offer_setup_reports"
+                                 constraintName="fk_offer_setup_reports_company"
+                                 deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION"
+                                 referencedColumnNames="id" referencedTableName="companies"/>
+
+        <addForeignKeyConstraint baseColumnNames="offer_setup" baseTableName="offer_setup_reports"
+                                 constraintName="fk_offer_setup_reports_setup"
+                                 deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION"
+                                 referencedColumnNames="id" referencedTableName="offer_setups"/>
+
+        <addForeignKeyConstraint baseColumnNames="traffic_source" baseTableName="offer_setup_reports"
+                                 constraintName="fk_offer_setup_reports_ts"
+                                 deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION"
+                                 referencedColumnNames="id" referencedTableName="traffic_sources"/>
+    </changeSet>
+
+    <changeSet id="ADX-018.4" author="denis" dbms="postgresql, h2">
+        <createTable tableName="ad_reports">
+            <column autoIncrement="true" name="id" type="SERIAL">
+                <constraints primaryKey="true" primaryKeyName="ad_reports_pk"/>
+            </column>
+            <column name="company" type="UUID">
+                <constraints nullable="false" unique="false"/>
+            </column>
+            <column name="campaign" type="UUID">
+                <constraints nullable="false" unique="false"/>
+            </column>
+            <column name="ad" type="UUID">
+                <constraints nullable="false" unique="false"/>
+            </column>
+            <column name="sale_count" type="int">
+                <constraints nullable="false"/>
+            </column>
+            <column name="click_count" type="int">
+                <constraints nullable="false"/>
+            </column>
+            <column name="revenue" type="double">
+                <constraints nullable="false"/>
+            </column>
+            <column name="epc" type="double">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="for_date" type="DATE"/>
+
+            <column name="created" defaultValueComputed="CURRENT_TIMESTAMP()" type="TIMESTAMP"/>
+        </createTable>
+
+        <addForeignKeyConstraint baseColumnNames="company" baseTableName="ad_reports"
+                                 constraintName="fk_ad_reports_company"
+                                 deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION"
+                                 referencedColumnNames="id" referencedTableName="companies"/>
+
+        <addForeignKeyConstraint baseColumnNames="campaign" baseTableName="ad_reports"
+                                 constraintName="fk_ad_reports_campaign"
+                                 deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION"
+                                 referencedColumnNames="id" referencedTableName="campaigns"/>
+
+        <addForeignKeyConstraint baseColumnNames="ad" baseTableName="ad_reports"
+                                 constraintName="fk_ad_reports_ad"
+                                 deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION"
+                                 referencedColumnNames="id" referencedTableName="ads"/>
+    </changeSet>
+
+    <changeSet id="ADX-018.5" author="denis" dbms="postgresql, h2">
+        <createTable tableName="saved_reports">
+            <column autoIncrement="true" name="id" type="SERIAL">
+                <constraints primaryKey="true" primaryKeyName="saved_reports_pk"/>
+            </column>
+            <column name="url" type="varchar">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="sale_count" type="int">
+                <constraints nullable="false"/>
+            </column>
+            <column name="click_count" type="int">
+                <constraints nullable="false"/>
+            </column>
+            <column name="revenue" type="double">
+                <constraints nullable="false"/>
+            </column>
+            <column name="epc" type="double">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="created" defaultValueComputed="CURRENT_TIMESTAMP()" type="TIMESTAMP"/>
+        </createTable>
+
+        <createIndex
+                indexName="idx_url"
+                tableName="saved_reports"
+                unique="true">
+            <column name="url" type="varchar"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="ADX-019.1" author="denis" dbms="postgresql, h2">
+        <createTable tableName="error_logs">
+            <column autoIncrement="true" name="id" type="SERIAL">
+                <constraints primaryKey="true" primaryKeyName="error_log_pk"/>
+            </column>
+            <column name="class_name" type="varchar">
+                <constraints nullable="false" unique="false"/>
+            </column>
+            <column name="exception_name" type="varchar">
+                <constraints nullable="true" unique="false"/>
+            </column>
+            <column name="exception_message" type="varchar">
+                <constraints nullable="true" unique="false"/>
+            </column>
+            <column name="comment" type="varchar">
+                <constraints nullable="true"/>
+            </column>
+
+            <column name="created" defaultValueComputed="CURRENT_TIMESTAMP()" type="TIMESTAMP"/>
+        </createTable>
+    </changeSet>
+
+
+</databaseChangeLog>
